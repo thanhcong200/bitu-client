@@ -3,10 +3,12 @@ import "bootstrap/dist/css/bootstrap.css";
 import "./login.css";
 import "./util.css";
 import * as api from "../../utils/api";
+import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 
 function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const history = useHistory();
   const handleLogin = async (e) => {
     e.preventDefault();
     const res = await api.login({ username, password });
@@ -16,6 +18,7 @@ function Login() {
       localStorage.setItem("username", res.data.username);
       localStorage.setItem("accessToken", res.data.accessToken);
       localStorage.setItem("refreshToken", res.data.refreshToken);
+      history.push('/')
       // go to chat
     } else console.log("error");
   };
@@ -74,7 +77,7 @@ function Login() {
             </div>
 
             <div className="text-center p-t-136">
-              <a className="txt2" href="#">
+              <a className="txt2" href="/register">
                 Create your Account
                 <i
                   className="fa fa-long-arrow-right m-l-5"

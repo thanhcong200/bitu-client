@@ -3,152 +3,42 @@ import { socket } from "../../utils/socket/index";
 import "bootstrap/dist/css/bootstrap.css";
 import "./chat.css";
 import * as api from "../../utils/api";
-import { getUser } from "../../utils";
+import People from "./people";
 
 function Chat() {
   const [chatHistory, setChatHistory] = useState([]);
   const [message, setMessage] = useState("");
-  const [id, setId] = useState();
   const [currentGroup, setCurrentGroup] = useState({});
-  const [groups, setGroups] = useState([
-    {
-      name: "Thanh Cong",
-      isActive: 1,
-      finalMessage: "Dang lam gi do",
-      lastSeen: new Date(),
-      isRead: true,
-      messages: [
-        {
-          message: "How are you today",
-          username: "Thanh Cong",
-          isCurrentUser: 1,
-          createdAt: "10:12 AM, Today",
-        },
-        {
-          message: "How are you today",
-          username: "Huy",
-          isCurrentUser: 0,
-          createdAt: "",
-        },
-        {
-          message: "How are you today",
-          username: "Thanh Cong",
-          isCurrentUser: 1,
-          createdAt: "",
-        },
-        {
-          message: "How are you today",
-          username: "Huy",
-          isCurrentUser: 0,
-          createdAt: "",
-        },
-      ],
-    },
-    {
-      name: "Vu Dat",
-      isActive: 0,
-      finalMessage: "",
-      lastSeen: new Date(),
-      isRead: false,
-      messages: [],
-    },
-    {
-      name: "Le Thao",
-      isActive: 1,
-      finalMessage: "",
-      lastSeen: new Date(),
-      isRead: false,
-      messages: [],
-    },
-    {
-      name: "Nguyen Nhung",
-      isActive: 0,
-      finalMessage: "hihi",
-      lastSeen: new Date(),
-      isRead: false,
-      messages: [],
-    },
-  ]);
-  const [user, setUser] = useState({});
-  const socketRef = useRef();
+  const [groups, setGroups] = useState([]);
+  const [userId, setUserId] = useState(null);
+
 
   useEffect(() => {
     let mounted = true;
-    api.getGroupsByUserId("64f7437ff570166002f7c548").then((res) => {
+    api.getGroupsByUserId().then((res) => {
       if (mounted && res.status !== 400) {
         console.log(res.data);
+        setGroups(res.data.docs)
       }
     });
+
     return () => (mounted = false);
   }, []);
 
   useEffect(() => {
-    socketRef.current = socket;
-  }, []);
+    setUserId(localStorage.getItem('id'))
+  }, [localStorage.getItem('id')])
 
-  useEffect(() => {
-    socketRef.current = socket;
-
-    socketRef.current.on("getId", (data) => {
-      setId(data);
-    }); // phần này đơn giản để gán id cho mỗi phiên kết nối vào page. Mục đích chính là để phân biệt đoạn nào là của mình đang chat.
-
-    socketRef.current.on("sendDataServer", (dataGot) => {
-      setChatHistory((oldMsgs) => [...oldMsgs, dataGot.data]);
-    }); // mỗi khi có tin nhắn thì mess sẽ được render thêm
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, []);
-
-  const handleCurrentChat = (group) => {
-    setCurrentGroup(group);
-    setChatHistory(group.messages);
+  const handleCurrentChat = async (group) => {
+    const res = await api.getGroupById(group._id.toString());
+    setCurrentGroup(res.data.docs[0]);
+    setChatHistory(res.data.docs[0].messages);
   };
 
   const renderGroups = () => {
     return (
       <ul className="list-unstyled chat-list mt-2 mb-0">
-        {groups.map((group, index) => {
-          return group.isActive ? (
-            <li
-              className="clearfix active"
-              key={index}
-              onClick={() => handleCurrentChat(group)}
-            >
-              <img
-                src="https://bootdey.com/img/Content/avatar/avatar2.png"
-                alt="avatar"
-              />
-              <div className="about">
-                <div className="name">{group.name}</div>
-                <div className="status">
-                  <h6>{group.finalMessage}</h6>
-                  <i className="fa fa-circle online">online</i>
-                </div>
-              </div>
-            </li>
-          ) : (
-            <li
-              className="clearfix"
-              key={index}
-              onClick={() => handleCurrentChat(group)}
-            >
-              <img
-                src="https://bootdey.com/img/Content/avatar/avatar1.png"
-                alt="avatar"
-              />
-              <div className="about">
-                <div className="name">{group.name}</div>
-                <div className="status">
-                  {group.finalMessage}
-                  <i className="fa fa-circle offline"></i>
-                </div>
-              </div>
-            </li>
-          );
-        })}
+        {groups.map((group, index) => <People index={index} group={group} handleCurrentChat={handleCurrentChat} />)}
       </ul>
     );
   };
@@ -158,19 +48,17 @@ function Chat() {
       <ul className="m-b-0">
         {chatHistory.map((message, index) => {
           //   const isCurrentUser = 1;
-          return message.isCurrentUser ? (
+          return message.sender._id.toString() === userId ? (
             <li className="clearfix" key={index}>
               <div className="message-data">
-                <span className="message-data-time">{message.createdAt}</span>
               </div>
               <div className="message my-message">{message.message}</div>
             </li>
           ) : (
             <li className="clearfix" key={index}>
               <div className="message-data text-right">
-                <span className="message-data-time">{message.createdAt}</span>
                 <img
-                  src="https://bootdey.com/img/Content/avatar/avatar7.png"
+                  src={currentGroup.partner?.avatar}
                   alt="avatar"
                 />
               </div>
@@ -208,12 +96,12 @@ function Chat() {
                       data-target="#view_info"
                     >
                       <img
-                        src="https://bootdey.com/img/Content/avatar/avatar2.png"
+                        src={currentGroup?.partner?.avatar}
                         alt="avatar"
                       />
                     </a>
                     <div className="chat-about">
-                      <h6 className="m-b-0">{currentGroup?.name}</h6>
+                      <h6 className="m-b-0">{currentGroup?.partner?.username}</h6>
                       {/* <small>Last seen: 2 hours ago</small> */}
                     </div>
                   </div>

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
-import { socket } from "./utils/socket/index";
+import React, { useEffect, useState } from "react";
+import { Route, BrowserRouter as Router, Switch } from "react-router-dom";
 import "./App.css";
 import Chat from "./components/chat/chat";
 import Login from "./components/login/index";
 import Register from "./components/register/index";
+import { socket } from "./utils/socket/index";
 
 const routes = [
   {
@@ -37,35 +37,25 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        {isLogin ? <Chat /> : <Login />}
+        {/* {isLogin ? <Chat /> : <Login />} */}
         {/* <Chat /> */}
-        {/* <Router>
-          <div>
-            <nav>
-              <ul>
-                {routes.map((route, index) => {
-                  return (
-                    <li>
-                      <Link to={route.path}> {route.name}</Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-
+        <Router>
           <Switch>
-            {routes.map((route, index) => {
-              return (
-                <Route
-                  key={index}
-                  path={route.path}
-                  Component={route.component}
-                ></Route>
-              );
-            })}
+            {routes.map((route, index) =>
+            (
+              <Route
+                key={index}
+                path={route.path}
+                // component={<Login />}
+                component={route.component}
+
+              ></Route>
+            )
+            )}
+
+
           </Switch>
-          </div>
-        </Router> */}
+        </Router>
       </header>
     </div>
   );

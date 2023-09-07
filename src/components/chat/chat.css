@@ -32,6 +32,10 @@
     transition: .5s
 }
 
+.people-list .chat-list {
+    overflow-y: auto;
+}
+
 .people-list .chat-list li {
     padding: 10px 15px;
     list-style: none;
@@ -68,7 +72,13 @@
 
 .people-list .status {
     color: #999;
-    font-size: 13px
+    font-size: 13px;
+    text-align: left    ;
+}
+
+.people-list .status h6 {
+color:black;
+font-size: 14px;
 }
 
 .chat .chat-header {
@@ -88,12 +98,16 @@
 }
 
 .chat .chat-history {
+    height: 60vh;
     padding: 20px;
-    border-bottom: 2px solid #fff
+    border-bottom: 2px solid #fff;
+    display: flex;
+    flex-direction: column;
 }
 
 .chat .chat-history ul {
-    padding: 0
+    padding:0;
+    overflow-y: auto    ;
 }
 
 .chat .chat-history ul li {
@@ -125,7 +139,7 @@
     line-height: 26px;
     font-size: 16px;
     border-radius: 7px;
-    display: inline-block;
+    width: fit-content;
     position: relative
 }
 
@@ -179,8 +193,9 @@
 .offline,
 .me {
     margin-right: 2px;
-    font-size: 8px;
-    vertical-align: middle
+    font-size: 12px;
+    vertical-align: middle;
+    font-weight: 500;
 }
 
 .online {

@@ -3,15 +3,17 @@ import "bootstrap/dist/css/bootstrap.css";
 import "../login/login.css";
 import "../login/util.css";
 import * as api from "../../utils/api";
+import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 
 function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const history = useHistory()
   const handleRegister = async (e) => {
     e.preventDefault();
     const res = await api.register({ username, password });
-    if (res.status != 400) {
-      // go to login page
+    if (res.status !== 400) {
+      history.push('/login')
     } else console.log("error");
   };
 
@@ -70,7 +72,7 @@ function Register() {
             </div>
 
             <div className="text-center p-t-136">
-              <a className="txt2" href="#">
+              <a className="txt2" href="/login">
                 Login with account
                 <i
                   className="fa fa-long-arrow-right m-l-5"
