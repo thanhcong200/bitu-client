@@ -8,7 +8,7 @@ export const register = async (data) => {
       data,
     });
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
 
@@ -18,31 +18,28 @@ export const login = async (data) => {
       method: "post",
       url: `${process.env.REACT_APP_API_URL}/auth/login`,
       data,
-
     });
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
 
-export const renewToken = async (data) => {
+export const renewToken = async () => {
   const token = localStorage.getItem("refreshToken");
   try {
     const res = await axios({
-      method: "post",
+      method: "get",
       url: `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
-      data,
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
 
 export const getGroupsByUserId = async () => {
-  console.log("hahahahah")
   const token = localStorage.getItem("accessToken");
   try {
     const res = await axios({
@@ -54,7 +51,7 @@ export const getGroupsByUserId = async () => {
     });
 
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
 
@@ -70,6 +67,6 @@ export const getGroupById = async (id) => {
     });
 
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
