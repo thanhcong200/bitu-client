@@ -1,8 +1,8 @@
-function People({ index, group, handleCurrentChat }) {
+
+function People({ group, handleCurrentChat }) {
     return group.partner.isOnline ? (
         <li
             className="clearfix"
-            key={index}
             onClick={() => handleCurrentChat(group)}
 
         >
@@ -21,7 +21,6 @@ function People({ index, group, handleCurrentChat }) {
     ) : (
         <li
             className="clearfix"
-            key={index}
             onClick={() => handleCurrentChat(group)}
         >
             <img

@@ -4,7 +4,6 @@ import "./App.css";
 import Chat from "./components/chat/chat";
 import Login from "./components/login/index";
 import Register from "./components/register/index";
-import { socket } from "./utils/socket/index";
 
 const routes = [
   {
@@ -25,10 +24,9 @@ const routes = [
 ];
 
 function App() {
-  const [isConnected, setIsConnected] = useState(socket.connected);
   const [isLogin, setIsLogin] = useState(false);
-
   const accessToken = localStorage.getItem("accessToken");
+
   useEffect(() => {
     if (accessToken) setIsLogin(true);
     // localStorage.removeItem("accessToken");

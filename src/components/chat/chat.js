@@ -1,91 +1,69 @@
 import React, { useState, useEffect } from "react";
-import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
-import { socket as socketInstance } from "../../utils/socket/index";
 import "bootstrap/dist/css/bootstrap.css";
 import "./chat.css";
 import * as api from "../../utils/api";
 import People from "./people";
+import { socket } from "../../utils/socket";
 
 function Chat() {
   const [chatHistory, setChatHistory] = useState([]);
-  const [message, setMessage] = useState("");
   const [currentGroup, setCurrentGroup] = useState({});
   const [groups, setGroups] = useState([]);
-  const [userId, setUserId] = useState(null);
-  const history = useHistory();
-  const [socket, setSocket] = useState(null);
+  const [userId, setUserId] = useState(localStorage.getItem("id"));
+  const [lastMessage, setLastMessage] = useState(null)
 
   useEffect(() => {
-    if (currentGroup?._id) {
-      const socketRef = socketInstance(currentGroup._id.toString());
-      setSocket(socketRef);
-      function onConnect() {}
+    if (lastMessage && groups.length) {
+      console.log(groups.length, groups[0]._id)
 
-      function onDisconnect() {}
-
-      function onFooEvent(value) {
-        console.log(value);
-        // setFooEvents((previous) => [...previous, value]);
+      const group = groups.find(g => g?._id?.toString() !== lastMessage?.roomId?.toString());
+      if (group) {
+        group.lastMessage = lastMessage;
+        console.log(group)
+        const newGroups = groups.filter(group => group?._id?.toString() !== lastMessage?.roomId?.toString());
+        newGroups.unshift(group);
+        setGroups(newGroups)
+        setLastMessage(null)
       }
-
-      socketRef.on("connect", onConnect);
-      socketRef.on("disconnect", onDisconnect);
-      socketRef.on("message-recieve", onFooEvent);
-
-      return () => {
-        socketRef.off("connect", onConnect);
-        socketRef.off("disconnect", onDisconnect);
-        socketRef.off("message-recieve", onFooEvent);
-      };
+      // currentGroup.messafes /
     }
-  }, [currentGroup]);
+  }, [lastMessage, groups])
 
   useEffect(() => {
-    if (socket) {
-      function onConnect() {}
+    function onConnect() {
 
-      function onDisconnect() {}
-
-      function onFooEvent(value) {
-        console.log(value);
-        // setFooEvents((previous) => [...previous, value]);
-      }
-
-      socket.on("connect", onConnect);
-      socket.on("disconnect", onDisconnect);
-      socket.on("message-recieve", onFooEvent);
-
-      return () => {
-        socket.off("connect", onConnect);
-        socket.off("disconnect", onDisconnect);
-        socket.off("message-recieve", onFooEvent);
-      };
     }
-  }, [socket]);
+
+    function onDisconnect() {
+    }
+
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('message-recieve', message => {
+      setLastMessage(message)
+    })
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('message-recieve', data => console.log(data))
+
+    };
+  }, []);
+
+
 
   useEffect(() => {
     let mounted = true;
     api.getGroupsByUserId().then((res) => {
       if (mounted && res.status !== 400) {
         setGroups(res.data.docs);
-      } else {
-        api.renewToken().then((res) => {
-          if (res.status !== 400) {
-            const { accessToken, refreshToken } = res.data;
-            console.log(res.data);
-            localStorage.setItem("accessToken", accessToken);
-            localStorage.setItem("refreshToken", refreshToken);
-          } else history.push("/login");
-        });
       }
     });
 
     return () => (mounted = false);
-  }, [localStorage.getItem("accessToken")]);
-
-  useEffect(() => {
-    setUserId(localStorage.getItem("id"));
-  }, [localStorage.getItem("id")]);
+  }, []);
 
   const handleCurrentChat = async (group) => {
     const res = await api.getGroupById(group._id.toString());
@@ -93,24 +71,22 @@ function Chat() {
     setChatHistory(res.data.docs[0].messages);
   };
 
-  const handleKeyDown = (key, message) => {
-    if (key === "Enter" && socket) {
-      const senderId = localStorage.getItem("id");
-      socket.emit("messages", {
-        message,
-        roomId: currentGroup._id.toString(),
-        senderId,
-      });
+  const handleKeyDown = (e) => {
+    const key = e.key;
+    const message = e.target.value;
+    if (key === "Enter") {
+      socket.emit('messages', { senderId: userId, message, roomId: currentGroup._id.toString() })
+      e.target.value = ""
     }
-    setMessage(message);
   };
+
 
   const renderGroups = () => {
     return (
       <ul className="list-unstyled chat-list mt-2 mb-0">
         {groups.map((group, index) => (
           <People
-            index={index}
+            key={index}
             group={group}
             handleCurrentChat={handleCurrentChat}
           />
@@ -184,7 +160,7 @@ function Chat() {
                     type="text"
                     className="form-control"
                     placeholder="Enter text here..."
-                    onKeyDown={(e) => handleKeyDown(e.key, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e)}
                   />
                 </div>
               </div>

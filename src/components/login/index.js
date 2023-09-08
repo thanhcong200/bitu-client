@@ -13,11 +13,11 @@ function Login() {
     e.preventDefault();
     const res = await api.login({ username, password });
     if (res.status !== 400) {
-      console.log(res.data);
       localStorage.setItem("id", res.data.id);
       localStorage.setItem("username", res.data.username);
       localStorage.setItem("accessToken", res.data.accessToken);
       localStorage.setItem("refreshToken", res.data.refreshToken);
+      console.log(res.data.refreshToken)
       history.push('/')
       // go to chat
     } else console.log("error");
