@@ -24,19 +24,11 @@ const routes = [
 ];
 
 function App() {
-  const [isLogin, setIsLogin] = useState(false);
-  const accessToken = localStorage.getItem("accessToken");
 
-  useEffect(() => {
-    if (accessToken) setIsLogin(true);
-    // localStorage.removeItem("accessToken");
-  }, [accessToken]);
 
   return (
     <div className="App">
       <header className="App-header">
-        {/* {isLogin ? <Chat /> : <Login />} */}
-        {/* <Chat /> */}
         <Router>
           <Switch>
             {routes.map((route, index) =>
@@ -44,14 +36,11 @@ function App() {
               <Route
                 key={index}
                 path={route.path}
-                // component={<Login />}
                 component={route.component}
 
               ></Route>
             )
             )}
-
-
           </Switch>
         </Router>
       </header>

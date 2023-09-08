@@ -1,6 +1,15 @@
 .container {
     height: 80%;
 }
+
+.profile{
+    padding-bottom: 50px;
+}
+
+.avatar{
+    width: 60px;
+}
+
 .card {
     background: #fff;
     transition: .5s;

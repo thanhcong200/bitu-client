@@ -19,10 +19,27 @@ export const login = async (data) => {
       url: `${process.env.REACT_APP_API_URL}/auth/login`,
       data,
     });
+    console.log("login", res.data)
     return { status: res.status, data: res.data };
   } catch (error) { }
   return { status: 400 };
 };
+
+export const getProfile = async () => {
+  let token = localStorage.getItem("accessToken");
+  try {
+    const res = await axios({
+      method: "get",
+      url: `${process.env.REACT_APP_API_URL}/users/profile`,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log("proflie", res.data)
+    return { status: res.status, data: res.data };
+  } catch (error) { }
+  return { status: 400 };
+}
 
 export const renewToken = async () => {
   const refreshToken = localStorage.getItem("refreshToken");

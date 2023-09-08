@@ -3,54 +3,77 @@ import "bootstrap/dist/css/bootstrap.css";
 import "./chat.css";
 import * as api from "../../utils/api";
 import People from "./people";
-import { socket } from "../../utils/socket";
-
+import { io } from 'socket.io-client';
+const URL = process.env.REACT_APP_WEBSOCKET_URL
 function Chat() {
   const [chatHistory, setChatHistory] = useState([]);
   const [currentGroup, setCurrentGroup] = useState({});
   const [groups, setGroups] = useState([]);
-  const [userId, setUserId] = useState(localStorage.getItem("id"));
+  const [user, setUser] = useState(null)
   const [lastMessage, setLastMessage] = useState(null)
+  const [socket, setSocket] = useState(null)
+  const [isChat, setIsChat] = useState(false)
+
+  const [isLogin, setIsLogin] = useState(false);
+  const accessToken = localStorage.getItem("accessToken");
 
   useEffect(() => {
-    if (lastMessage && groups.length) {
-      console.log(groups.length, groups[0]._id)
+    if (accessToken) {
+      setIsLogin(true);
+    }
+  }, [accessToken]);
 
-      const group = groups.find(g => g?._id?.toString() !== lastMessage?.roomId?.toString());
-      if (group) {
-        group.lastMessage = lastMessage;
-        console.log(group)
-        const newGroups = groups.filter(group => group?._id?.toString() !== lastMessage?.roomId?.toString());
-        newGroups.unshift(group);
-        setGroups(newGroups)
-        setLastMessage(null)
-      }
-      // currentGroup.messafes /
+  useEffect(() => {
+    setUser(user)
+  }, [user]);
+
+
+  useEffect(() => {
+    if (lastMessage) {
+      chatHistory.push(lastMessage)
+      const newGroups = groups.filter(group => group._id.toString() !== lastMessage.roomId.toString())
+      const cGroup = groups.find(group => group._id.toString() === lastMessage.roomId.toString());
+      cGroup.lastMessage = lastMessage;
+      newGroups.unshift(cGroup);
+      setGroups(newGroups)
+      setLastMessage(null)
     }
   }, [lastMessage, groups])
 
   useEffect(() => {
-    function onConnect() {
 
-    }
+    if (!isLogin) return () => { }
+    api.getProfile().then(res => {
+      if (res.status !== 400) {
+        console.group("profile ", res.data)
+        setUser(res.data)
+        const socketInstance = io(URL, { query: { roomId: user?._id.toString() } });
+        setSocket(socketInstance)
 
-    function onDisconnect() {
-    }
+        function onConnect() {
+
+        }
+
+        function onDisconnect() {
+        }
 
 
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('message-recieve', message => {
-      setLastMessage(message)
+        socketInstance.on('connect', onConnect);
+        socketInstance.on('disconnect', onDisconnect);
+        socketInstance.on('message-recieve', data => {
+          setLastMessage(data.message)
+        })
+
+        return () => {
+          socketInstance.off('connect', onConnect);
+          socketInstance.off('disconnect', onDisconnect);
+          socketInstance.off('message-recieve', data => console.log(data))
+
+        };
+      }
     })
 
-    return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('message-recieve', data => console.log(data))
-
-    };
-  }, []);
+  }, [isLogin]);
 
 
 
@@ -67,15 +90,16 @@ function Chat() {
 
   const handleCurrentChat = async (group) => {
     const res = await api.getGroupById(group._id.toString());
-    setCurrentGroup(res.data.docs[0]);
-    setChatHistory(res.data.docs[0].messages);
+    setCurrentGroup(group);
+    setChatHistory(res.data.docs);
+    setIsChat(true)
   };
 
   const handleKeyDown = (e) => {
     const key = e.key;
     const message = e.target.value;
-    if (key === "Enter") {
-      socket.emit('messages', { senderId: userId, message, roomId: currentGroup._id.toString() })
+    if (key === "Enter" && isLogin) {
+      socket.emit('messages', { senderId: user?._id.toString(), message, roomId: currentGroup._id.toString() })
       e.target.value = ""
     }
   };
@@ -98,9 +122,9 @@ function Chat() {
   const renderChatHistory = () => {
     return (
       <ul className="m-b-0">
-        {chatHistory.map((message, index) => {
+        {isChat && chatHistory.map((message, index) => {
           //   const isCurrentUser = 1;
-          return message.sender._id.toString() === userId ? (
+          return message.sender.id.toString() === user?._id.toString() ? (
             <li className="clearfix" key={index}>
               <div className="message-data"></div>
               <div className="message my-message">{message.message}</div>
@@ -125,6 +149,16 @@ function Chat() {
         <div className="col-lg-12">
           <div className="card chat-app">
             <div id="plist" className="people-list">
+              <div className="profile">
+                <div >
+                  <img src={user?.avatar} alt="avatar" className="avatar" />
+
+                </div>
+                <div className="message">
+                  {user?.username}
+                </div>
+              </div>
+
               <div className="input-group">
                 <input
                   type="text"
@@ -160,6 +194,7 @@ function Chat() {
                     type="text"
                     className="form-control"
                     placeholder="Enter text here..."
+                    disabled={isChat ? false : true}
                     onKeyDown={(e) => handleKeyDown(e)}
                   />
                 </div>

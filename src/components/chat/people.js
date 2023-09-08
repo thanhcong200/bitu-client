@@ -30,7 +30,7 @@ function People({ group, handleCurrentChat }) {
             <div className="about">
                 <div className="name">{group.partner?.username}</div>
                 <div className="status">
-                    <h6>{group?.lastMessage ? group.lastMessage?.message.slice(0, 20) : ""}</h6>
+                    <h6>{group?.lastMessage ? group.lastMessage?.message : ""}</h6>
                     <i className="fa fa-circle offline"></i>
                 </div>
             </div>
