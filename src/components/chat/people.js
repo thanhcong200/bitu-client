@@ -1,41 +1,34 @@
+import { api } from "../../utils/api";
 
-function People({ group, handleCurrentChat }) {
-    return group.partner.isOnline ? (
-        <li
-            className="clearfix"
-            onClick={() => handleCurrentChat(group)}
-
-        >
-            <img
-                src={group.partner?.avatar}
-                alt="avatar"
-            />
-            <div className="about">
-                <div className="name">{group.partner?.username}</div>
-                <div className="status">
-                    <h6>{group?.lastMessage ? group.lastMessage?.message.slice(0, 20) : ""}</h6>
-                    <i className="fa fa-circle online">online</i>
-                </div>
-            </div>
-        </li>
-    ) : (
-        <li
-            className="clearfix"
-            onClick={() => handleCurrentChat(group)}
-        >
-            <img
-                src={group.partner?.avatar}
-                alt="avatar"
-            />
-            <div className="about">
-                <div className="name">{group.partner?.username}</div>
-                <div className="status">
-                    <h6>{group?.lastMessage ? group.lastMessage?.message : ""}</h6>
-                    <i className="fa fa-circle offline"></i>
-                </div>
-            </div>
-        </li>
-    );
+function People({ user, handleUpdateGroups, currentUserId }) {
+  const createGroup = async () => {
+    const members = [user._id.toString(), currentUserId].join(",");
+    const res = await api.handleCreateGroup({ members });
+    if (res.status === 400 || res.status === 401) {
+      handleUpdateGroups(null);
+    } else handleUpdateGroups(res.data);
+  };
+  return user.isOnline ? (
+    <li className="clearfix" onClick={() => createGroup()}>
+      <img src={user?.avatar} alt="avatar" />
+      <div className="about">
+        <div className="name">{user?.username}</div>
+        <div className="status">
+          <i className="fa fa-circle online">online</i>
+        </div>
+      </div>
+    </li>
+  ) : (
+    <li className="clearfix" onClick={() => createGroup()}>
+      <img src={user?.avatar} alt="avatar" />
+      <div className="about">
+        <div className="name">{user?.username}</div>
+        <div className="status">
+          <i className="fa fa-circle offline"></i>
+        </div>
+      </div>
+    </li>
+  );
 }
 
 export default People;

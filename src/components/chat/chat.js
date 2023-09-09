@@ -1,21 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.css";
 import "./chat.css";
-import * as api from "../../utils/api";
+import { api } from "../../utils/api/index";
+import Group from "./group";
+import { io } from "socket.io-client";
+import { useHistory } from "react-router-dom/cjs/react-router-dom";
 import People from "./people";
-import { io } from 'socket.io-client';
-const URL = process.env.REACT_APP_WEBSOCKET_URL
+const URL = process.env.REACT_APP_WEBSOCKET_URL;
 function Chat() {
   const [chatHistory, setChatHistory] = useState([]);
   const [currentGroup, setCurrentGroup] = useState({});
   const [groups, setGroups] = useState([]);
-  const [user, setUser] = useState(null)
-  const [lastMessage, setLastMessage] = useState(null)
-  const [socket, setSocket] = useState(null)
-  const [isChat, setIsChat] = useState(false)
-
+  const [user, setUser] = useState(null);
+  const [lastMessage, setLastMessage] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [isChat, setIsChat] = useState(false);
+  const history = useHistory();
   const [isLogin, setIsLogin] = useState(false);
   const accessToken = localStorage.getItem("accessToken");
+  const [suggestUsers, setSuggestUsers] = useState([]);
+  const [isSearch, setIsSearch] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatHistory]);
 
   useEffect(() => {
     if (accessToken) {
@@ -24,64 +37,81 @@ function Chat() {
   }, [accessToken]);
 
   useEffect(() => {
-    setUser(user)
-  }, [user]);
-
+    if (isLogin) {
+      api.handleGetProfile().then((res) => {
+        if (res.status !== 400 && res.status !== 401) {
+          setUser(res.data);
+        }
+      });
+    }
+  }, [isLogin]);
 
   useEffect(() => {
     if (lastMessage) {
-      chatHistory.push(lastMessage)
-      const newGroups = groups.filter(group => group._id.toString() !== lastMessage.roomId.toString())
-      const cGroup = groups.find(group => group._id.toString() === lastMessage.roomId.toString());
+      chatHistory.push(lastMessage);
+      const newGroups = groups.filter(
+        (group) => group._id.toString() !== lastMessage.roomId.toString()
+      );
+      const cGroup = groups.find(
+        (group) => group._id.toString() === lastMessage.roomId.toString()
+      );
       cGroup.lastMessage = lastMessage;
       newGroups.unshift(cGroup);
-      setGroups(newGroups)
-      setLastMessage(null)
+      setGroups(newGroups);
+      setLastMessage(null);
     }
-  }, [lastMessage, groups])
+  }, [lastMessage, groups]);
 
   useEffect(() => {
+    if (!isLogin || !user) return () => {};
+    const socketInstance = io(URL, {
+      query: { roomId: user?._id.toString() },
+    });
+    setSocket(socketInstance);
 
-    if (!isLogin) return () => { }
-    api.getProfile().then(res => {
-      if (res.status !== 400) {
-        console.group("profile ", res.data)
-        setUser(res.data)
-        const socketInstance = io(URL, { query: { roomId: user?._id.toString() } });
-        setSocket(socketInstance)
+    function onConnect() {}
 
-        function onConnect() {
+    function onDisconnect() {}
 
-        }
+    socketInstance.on("connect", onConnect);
+    socketInstance.on("disconnect", onDisconnect);
+    socketInstance.on("message-recieve", (data) => {
+      console.log("receive messgae ", data);
+      setLastMessage({
+        ...data.message,
+        sender: {
+          id: user?._id,
+          username: user?.username,
+          avatar: user?.avatar,
+        },
+      });
+    });
 
-        function onDisconnect() {
-        }
+    return () => {
+      socketInstance.off("connect", onConnect);
+      socketInstance.off("disconnect", onDisconnect);
+      socketInstance.off("message-recieve", (data) => console.log(data));
+    };
+  }, [isLogin, user]);
 
-
-        socketInstance.on('connect', onConnect);
-        socketInstance.on('disconnect', onDisconnect);
-        socketInstance.on('message-recieve', data => {
-          setLastMessage(data.message)
-        })
-
-        return () => {
-          socketInstance.off('connect', onConnect);
-          socketInstance.off('disconnect', onDisconnect);
-          socketInstance.off('message-recieve', data => console.log(data))
-
-        };
-      }
-    })
-
-  }, [isLogin]);
-
-
+  const handleUpdateGroups = async (group) => {
+    if (group) {
+      groups.unshift(group);
+      const res = await api.handleGetGroupById(group._id.toString());
+      setCurrentGroup(group);
+      setChatHistory(res.data.docs);
+      setGroups(groups);
+    }
+    setIsSearch(false);
+  };
 
   useEffect(() => {
     let mounted = true;
-    api.getGroupsByUserId().then((res) => {
-      if (mounted && res.status !== 400) {
-        setGroups(res.data.docs);
+    api.handleGetGroupsByUserId().then((res) => {
+      if (mounted) {
+        if (res.status !== 400 && res.status !== 401) {
+          setGroups(res.data.docs);
+        } else history.push("/login");
       }
     });
 
@@ -89,27 +119,48 @@ function Chat() {
   }, []);
 
   const handleCurrentChat = async (group) => {
-    const res = await api.getGroupById(group._id.toString());
+    const res = await api.handleGetGroupById(group._id.toString());
     setCurrentGroup(group);
     setChatHistory(res.data.docs);
-    setIsChat(true)
+    setIsChat(true);
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDownMessage = (e) => {
     const key = e.key;
     const message = e.target.value;
     if (key === "Enter" && isLogin) {
-      socket.emit('messages', { senderId: user?._id.toString(), message, roomId: currentGroup._id.toString() })
-      e.target.value = ""
+      socket.emit("messages", {
+        senderId: user?._id.toString(),
+        message,
+        roomId: currentGroup._id.toString(),
+      });
+      e.target.value = "";
     }
   };
 
+  const handleKeyDownSearch = async (e) => {
+    const key = e.key;
+    const keyword = e.target.value;
+    if (key === "Enter" && isLogin) {
+      const { status, data } = await api.handleGetListUser(keyword);
+      if (status !== 400 && status !== 401) {
+        setSuggestUsers(data.docs);
+        setIsSearch(true);
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    history.push("/login");
+  };
 
   const renderGroups = () => {
     return (
       <ul className="list-unstyled chat-list mt-2 mb-0">
         {groups.map((group, index) => (
-          <People
+          <Group
             key={index}
             group={group}
             handleCurrentChat={handleCurrentChat}
@@ -119,27 +170,48 @@ function Chat() {
     );
   };
 
+  const renderSuggestUser = () => {
+    return (
+      <ul className="list-unstyled chat-list mt-2 mb-0">
+        {suggestUsers &&
+          suggestUsers.map((userSuggest, index) => (
+            <People
+              key={index}
+              user={userSuggest}
+              currentUserId={user._id.toString()}
+              handleUpdateGroups={handleUpdateGroups}
+            />
+          ))}
+      </ul>
+    );
+  };
+
+  const cancelSearch = () => {
+    document.querySelector("#search").value = "";
+    setIsSearch(false);
+  };
+
   const renderChatHistory = () => {
     return (
       <ul className="m-b-0">
-        {isChat && chatHistory.map((message, index) => {
-          //   const isCurrentUser = 1;
-          return message.sender.id.toString() === user?._id.toString() ? (
-            <li className="clearfix" key={index}>
-              <div className="message-data"></div>
-              <div className="message my-message">{message.message}</div>
-            </li>
-          ) : (
-            <li className="clearfix" key={index}>
-              <div className="message-data text-right">
-                <img src={currentGroup.partner?.avatar} alt="avatar" />
-              </div>
-              <div className="message other-message float-right">
-                {message.message}
-              </div>
-            </li>
-          );
-        })}
+        {isChat &&
+          chatHistory.map((message, index) => {
+            return message.sender.id.toString() === user?._id.toString() ? (
+              <li className="clearfix" key={index}>
+                <div className="message-data"></div>
+                <div className="message my-message">{message.message}</div>
+              </li>
+            ) : (
+              <li className="clearfix" key={index}>
+                <div className="message-data text-right">
+                  <img src={currentGroup.partner?.avatar} alt="avatar" />
+                </div>
+                <div className="message other-message float-right">
+                  {message.message}
+                </div>
+              </li>
+            );
+          })}
       </ul>
     );
   };
@@ -150,23 +222,22 @@ function Chat() {
           <div className="card chat-app">
             <div id="plist" className="people-list">
               <div className="profile">
-                <div >
+                <div>
                   <img src={user?.avatar} alt="avatar" className="avatar" />
-
                 </div>
-                <div className="message">
-                  {user?.username}
-                </div>
+                <div className="message">{user?.username}</div>
               </div>
 
               <div className="input-group">
                 <input
+                  id="search"
                   type="text"
                   className="form-control"
                   placeholder="Search..."
+                  onKeyDown={(e) => handleKeyDownSearch(e)}
                 />
               </div>
-              {renderGroups()}
+              {isSearch ? renderSuggestUser() : renderGroups()}
             </div>
             <div className="chat">
               <div className="chat-header clearfix">
@@ -177,7 +248,14 @@ function Chat() {
                       data-toggle="modal"
                       data-target="#view_info"
                     >
-                      <img src={currentGroup?.partner?.avatar} alt="avatar" />
+                      <img
+                        src={
+                          currentGroup?.partner?.avatar
+                            ? currentGroup?.partner?.avatar
+                            : user?.avatar
+                        }
+                        alt="avatar"
+                      />
                     </a>
                     <div className="chat-about">
                       <h6 className="m-b-0">
@@ -185,9 +263,23 @@ function Chat() {
                       </h6>
                     </div>
                   </div>
+                  <div className="col-lg-6 hidden-sm text-right">
+                    <button
+                      className="btn btn-outline-warning"
+                      onClick={() => handleLogout()}
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="chat-history">{renderChatHistory()}</div>
+              <div
+                className="chat-history"
+                onClick={() => cancelSearch()}
+                ref={messagesEndRef}
+              >
+                {renderChatHistory()}
+              </div>
               <div className="chat-message clearfix">
                 <div className="input-group mb-0">
                   <input
@@ -195,7 +287,7 @@ function Chat() {
                     className="form-control"
                     placeholder="Enter text here..."
                     disabled={isChat ? false : true}
-                    onKeyDown={(e) => handleKeyDown(e)}
+                    onKeyDown={(e) => handleKeyDownMessage(e)}
                   />
                 </div>
               </div>

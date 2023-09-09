@@ -2,7 +2,7 @@ import { useState } from "react";
 import "bootstrap/dist/css/bootstrap.css";
 import "./login.css";
 import "./util.css";
-import * as api from "../../utils/api";
+import { api } from "../../utils/api";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 
 function Login() {
@@ -11,11 +11,13 @@ function Login() {
   const history = useHistory();
   const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await api.login({ username, password });
+    const res = await api.handleLogin({ username, password });
+
     if (res.status !== 400) {
+      console.log(res);
       localStorage.setItem("accessToken", res.data.accessToken);
       localStorage.setItem("refreshToken", res.data.refreshToken);
-      history.push('/')
+      history.push("/");
       // go to chat
     } else console.log("error");
   };

@@ -8,7 +8,7 @@ export const register = async (data) => {
       data,
     });
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
 
@@ -19,9 +19,8 @@ export const login = async (data) => {
       url: `${process.env.REACT_APP_API_URL}/auth/login`,
       data,
     });
-    console.log("login", res.data)
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
 };
 
@@ -35,11 +34,25 @@ export const getProfile = async () => {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("proflie", res.data)
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
   return { status: 400 };
-}
+};
+
+export const getListUser = async (keyword) => {
+  let token = localStorage.getItem("accessToken");
+  try {
+    const res = await axios({
+      method: "get",
+      url: `${process.env.REACT_APP_API_URL}/users?keyword=${keyword}`,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return { status: res.status, data: res.data };
+  } catch (error) {}
+  return { status: 400 };
+};
 
 export const renewToken = async () => {
   const refreshToken = localStorage.getItem("refreshToken");
@@ -51,16 +64,14 @@ export const renewToken = async () => {
         Authorization: `Bearer ${refreshToken}`,
       },
     });
-    localStorage.setItem('accessToken', res.data.token);
-    localStorage.setItem('refreshToken', res.data.refreshToken);
+    localStorage.setItem("accessToken", res.data.accessToken);
+    localStorage.setItem("refreshToken", res.data.refreshToken);
     return { status: res.status, data: res.data };
-  } catch (error) {
-  }
+  } catch (error) {}
   return { status: 400 };
 };
 
 export const getGroupsByUserId = async () => {
-
   let token = localStorage.getItem("accessToken");
   try {
     const res = await axios({
@@ -71,8 +82,7 @@ export const getGroupsByUserId = async () => {
       },
     });
     return { status: res.status, data: res.data };
-  } catch (error) {
-  }
+  } catch (error) {}
   return { status: 400 };
 };
 
@@ -88,6 +98,23 @@ export const getGroupById = async (id) => {
     });
 
     return { status: res.status, data: res.data };
-  } catch (error) { }
+  } catch (error) {}
+  return { status: 400 };
+};
+
+export const createGroup = async (data) => {
+  const token = localStorage.getItem("accessToken");
+  try {
+    const res = await axios({
+      method: "post",
+      url: `${process.env.REACT_APP_API_URL}/rooms`,
+      data,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return { status: res.status, data: res.data };
+  } catch (error) {}
   return { status: 400 };
 };
