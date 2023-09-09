@@ -73,10 +73,13 @@ export const renewToken = async () => {
 
 export const getGroupsByUserId = async () => {
   let token = localStorage.getItem("accessToken");
+  const sort = {
+    "lastMessage.createdAt": "desc",
+  };
   try {
     const res = await axios({
       method: "get",
-      url: `${process.env.REACT_APP_API_URL}/rooms`,
+      url: `${process.env.REACT_APP_API_URL}/rooms?sort=${sort}`,
       headers: {
         Authorization: `Bearer ${token}`,
       },

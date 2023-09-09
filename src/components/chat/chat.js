@@ -48,7 +48,7 @@ function Chat() {
 
   useEffect(() => {
     if (lastMessage) {
-      chatHistory.push(lastMessage);
+      chatHistory.unshift(lastMessage);
       const newGroups = groups.filter(
         (group) => group._id.toString() !== lastMessage.roomId.toString()
       );
@@ -58,6 +58,7 @@ function Chat() {
       cGroup.lastMessage = lastMessage;
       newGroups.unshift(cGroup);
       setGroups(newGroups);
+      setChatHistory(chatHistory.reverse());
       setLastMessage(null);
     }
   }, [lastMessage, groups]);
@@ -87,6 +88,16 @@ function Chat() {
       });
     });
 
+    socketInstance.on("new-group", (data) => {
+      const group = data?.group;
+      console.log("new group", group);
+      const partner = group.members.find(
+        (member) => member.id.toString() !== user?._id.toString()
+      );
+      setGroups([{ ...group, partner }, ...groups]);
+      setCurrentGroup(group);
+    });
+
     return () => {
       socketInstance.off("connect", onConnect);
       socketInstance.off("disconnect", onDisconnect);
@@ -96,13 +107,15 @@ function Chat() {
 
   const handleUpdateGroups = async (group) => {
     if (group) {
-      groups.unshift(group);
-      const res = await api.handleGetGroupById(group._id.toString());
       setCurrentGroup(group);
-      setChatHistory(res.data.docs);
-      setGroups(groups);
+      setChatHistory([]);
+      setGroups([group, ...groups]);
+      socket.emit("groups", {
+        senderId: user?._id.toString(),
+        roomId: group?._id.toString(),
+      });
     }
-    setIsSearch(false);
+    cancelSearch();
   };
 
   useEffect(() => {
@@ -121,7 +134,7 @@ function Chat() {
   const handleCurrentChat = async (group) => {
     const res = await api.handleGetGroupById(group._id.toString());
     setCurrentGroup(group);
-    setChatHistory(res.data.docs);
+    setChatHistory(res.data.docs.reverse());
     setIsChat(true);
   };
 
@@ -129,6 +142,16 @@ function Chat() {
     const key = e.key;
     const message = e.target.value;
     if (key === "Enter" && isLogin) {
+      const messageObj = {
+        roomId: currentGroup._id.toString(),
+        sender: {
+          id: user?._id,
+          username: user?.username,
+          avatar: user?.avatar,
+        },
+        message,
+      };
+      setLastMessage(messageObj);
       socket.emit("messages", {
         senderId: user?._id.toString(),
         message,

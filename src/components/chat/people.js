@@ -3,10 +3,10 @@ import { api } from "../../utils/api";
 function People({ user, handleUpdateGroups, currentUserId }) {
   const createGroup = async () => {
     const members = [user._id.toString(), currentUserId].join(",");
-    const res = await api.handleCreateGroup({ members });
-    if (res.status === 400 || res.status === 401) {
-      handleUpdateGroups(null);
-    } else handleUpdateGroups(res.data);
+    const { status, data } = await api.handleCreateGroup({ members });
+    if (status !== 400 && status !== 401) {
+      handleUpdateGroups(data);
+    }
   };
   return user.isOnline ? (
     <li className="clearfix" onClick={() => createGroup()}>
