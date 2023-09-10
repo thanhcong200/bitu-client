@@ -4,6 +4,8 @@
 
 .profile{
     padding-bottom: 50px;
+    word-wrap: break-word;
+    font-size: larger;
 }
 
 .avatar{
@@ -43,6 +45,7 @@
 
 .people-list .chat-list {
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .people-list .chat-list li {
@@ -116,7 +119,9 @@ font-size: 14px;
 
 .chat .chat-history ul {
     padding:0;
-    overflow-y: auto    ;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 60vh;
 }
 
 .chat .chat-history ul li {

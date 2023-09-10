@@ -6,6 +6,7 @@ import Group from "./group";
 import { io } from "socket.io-client";
 import { useHistory } from "react-router-dom/cjs/react-router-dom";
 import People from "./people";
+import { SOCKET_EVENT, SOCKET_SUBCRIBE } from "../../utils/constant";
 const URL = process.env.REACT_APP_WEBSOCKET_URL;
 function Chat() {
   const [chatHistory, setChatHistory] = useState([]);
@@ -29,7 +30,7 @@ function Chat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, []);
+  }, [currentGroup]);
 
   useEffect(() => {
     if (accessToken) {
@@ -77,21 +78,39 @@ function Chat() {
 
     socketInstance.on("connect", onConnect);
     socketInstance.on("disconnect", onDisconnect);
-    socketInstance.on("message-recieve", (data) => {
-      console.log("receive messgae ", data);
+    socketInstance.on(SOCKET_EVENT.MESSAGE, (data) => {
       setLastMessage({
         ...data.message,
       });
     });
 
-    socketInstance.on("new-group", (data) => {
+    socketInstance.on(SOCKET_EVENT.NEW_GROUP, (data) => {
       const group = data?.group;
-      console.log("new group", group);
       const partner = group.members.find(
         (member) => member.id.toString() !== user?._id.toString()
       );
       setGroups([{ ...group, partner }, ...groups]);
       setCurrentGroup(group);
+    });
+
+    socketInstance.on(SOCKET_EVENT.OFFLINE, (data) => {
+      const newGroups = groups.map((group) =>
+        group._id.toString() === data.roomId.toString()
+          ? { ...group, partner: { ...group.partner, isOnline: data.isOnline } }
+          : group
+      );
+      console.log(data, newGroups);
+      setGroups(newGroups);
+    });
+
+    socketInstance.on(SOCKET_EVENT.ONLINE, (data) => {
+      const newGroups = groups.map((group) =>
+        group._id.toString() === data.roomId.toString()
+          ? { ...group, partner: { ...group.partner, isOnline: data.isOnline } }
+          : group
+      );
+      console.log(data, newGroups);
+      setGroups(newGroups);
     });
 
     return () => {
@@ -100,19 +119,6 @@ function Chat() {
       socketInstance.off("message-recieve", (data) => console.log(data));
     };
   }, [isLogin, user]);
-
-  const handleUpdateGroups = async (group) => {
-    if (group) {
-      setCurrentGroup(group);
-      setChatHistory([]);
-      setGroups([group, ...groups]);
-      socket.emit("groups", {
-        senderId: user?._id.toString(),
-        roomId: group?._id.toString(),
-      });
-    }
-    cancelSearch();
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -126,6 +132,20 @@ function Chat() {
 
     return () => (mounted = false);
   }, []);
+
+  const handleUpdateGroups = async (group) => {
+    if (group) {
+      setCurrentGroup(group);
+      setChatHistory([]);
+      setGroups([group, ...groups]);
+      socket.emit(SOCKET_SUBCRIBE.GROUP, {
+        senderId: user?._id.toString(),
+        roomId: group?._id.toString(),
+      });
+      setIsChat(true);
+    }
+    cancelSearch();
+  };
 
   const handleCurrentChat = async (group) => {
     const res = await api.handleGetGroupById({
@@ -151,7 +171,7 @@ function Chat() {
         message,
       };
       setLastMessage(messageObj);
-      socket.emit("messages", {
+      socket.emit(SOCKET_SUBCRIBE.MESSAGE, {
         senderId: user?._id.toString(),
         message,
         roomId: currentGroup._id.toString(),
@@ -174,7 +194,6 @@ function Chat() {
 
   const handleScroll = async (e) => {
     if (e.target.scrollTop === 0) {
-      console.log(e.target);
       if (currentGroup?._id) {
         const { offset, limit } = messageQuery;
         let newOffset = offset + chatHistory.length;
