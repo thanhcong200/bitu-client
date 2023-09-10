@@ -1,3 +1,4 @@
+import logo from "../../logo.svg";
 import { useState } from "react";
 import "bootstrap/dist/css/bootstrap.css";
 import "./login.css";
@@ -14,19 +15,18 @@ function Login() {
     const res = await api.handleLogin({ username, password });
 
     if (res.status !== 400) {
-      console.log(res);
       localStorage.setItem("accessToken", res.data.accessToken);
       localStorage.setItem("refreshToken", res.data.refreshToken);
       history.push("/");
       // go to chat
-    } else console.log("error");
+    } else alert("Login fail");
   };
   return (
     <div className="limiter">
       <div className="container-login100">
         <div className="wrap-login100">
           <div className="login100-pic js-tilt" data-tilt>
-            <img src="images/img-01.png" alt="IMG" />
+            <img src={logo} alt="IMG" />
           </div>
 
           <form className="login100-form validate-form">

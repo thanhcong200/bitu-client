@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Route, BrowserRouter as Router, Switch } from "react-router-dom";
 import "./App.css";
 import Chat from "./components/chat/chat";
@@ -24,23 +24,18 @@ const routes = [
 ];
 
 function App() {
-
-
   return (
     <div className="App">
       <header className="App-header">
         <Router>
           <Switch>
-            {routes.map((route, index) =>
-            (
+            {routes.map((route, index) => (
               <Route
                 key={index}
                 path={route.path}
                 component={route.component}
-
               ></Route>
-            )
-            )}
+            ))}
           </Switch>
         </Router>
       </header>
