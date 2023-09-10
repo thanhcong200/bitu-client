@@ -21,6 +21,7 @@ function Chat() {
   const [suggestUsers, setSuggestUsers] = useState([]);
   const [isSearch, setIsSearch] = useState(false);
   const messagesEndRef = useRef(null);
+  const [messageQuery, setMessageQuery] = useState({ offset: 0, limit: 10 });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,7 +29,7 @@ function Chat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [chatHistory]);
+  }, []);
 
   useEffect(() => {
     if (accessToken) {
@@ -48,7 +49,7 @@ function Chat() {
 
   useEffect(() => {
     if (lastMessage) {
-      chatHistory.unshift(lastMessage);
+      chatHistory.push(lastMessage);
       const newGroups = groups.filter(
         (group) => group._id.toString() !== lastMessage.roomId.toString()
       );
@@ -58,7 +59,7 @@ function Chat() {
       cGroup.lastMessage = lastMessage;
       newGroups.unshift(cGroup);
       setGroups(newGroups);
-      setChatHistory(chatHistory.reverse());
+      setChatHistory(chatHistory);
       setLastMessage(null);
     }
   }, [lastMessage, groups]);
@@ -80,11 +81,6 @@ function Chat() {
       console.log("receive messgae ", data);
       setLastMessage({
         ...data.message,
-        sender: {
-          id: user?._id,
-          username: user?.username,
-          avatar: user?.avatar,
-        },
       });
     });
 
@@ -132,7 +128,10 @@ function Chat() {
   }, []);
 
   const handleCurrentChat = async (group) => {
-    const res = await api.handleGetGroupById(group._id.toString());
+    const res = await api.handleGetGroupById({
+      ...messageQuery,
+      id: group._id.toString(),
+    });
     setCurrentGroup(group);
     setChatHistory(res.data.docs.reverse());
     setIsChat(true);
@@ -169,6 +168,31 @@ function Chat() {
       if (status !== 400 && status !== 401) {
         setSuggestUsers(data.docs);
         setIsSearch(true);
+      }
+    }
+  };
+
+  const handleScroll = async (e) => {
+    if (e.target.scrollTop === 0) {
+      console.log(e.target);
+      if (currentGroup?._id) {
+        const { offset, limit } = messageQuery;
+        let newOffset = offset + chatHistory.length;
+        const { status, data } = await api.handleGetGroupById({
+          offset: newOffset,
+          limit: limit,
+          id: currentGroup._id.toString(),
+        });
+
+        if (status !== 400 && status !== 401) {
+          if (data.docs.length > 0) {
+            setMessageQuery({
+              offset: offset + chatHistory.length,
+              limit: limit,
+            });
+            setChatHistory([...data.docs.reverse(), ...chatHistory]);
+          }
+        } else history.push("/login");
       }
     }
   };
@@ -216,7 +240,7 @@ function Chat() {
 
   const renderChatHistory = () => {
     return (
-      <ul className="m-b-0">
+      <ul className="m-b-0" onScroll={handleScroll} ref={messagesEndRef}>
         {isChat &&
           chatHistory.map((message, index) => {
             return message.sender.id.toString() === user?._id.toString() ? (
@@ -296,11 +320,7 @@ function Chat() {
                   </div>
                 </div>
               </div>
-              <div
-                className="chat-history"
-                onClick={() => cancelSearch()}
-                ref={messagesEndRef}
-              >
+              <div className="chat-history" onClick={() => cancelSearch()}>
                 {renderChatHistory()}
               </div>
               <div className="chat-message clearfix">

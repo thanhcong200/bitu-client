@@ -30,12 +30,12 @@ export const api = {
   async handleGetGroupsByUserId() {
     return this.handleRefreshToken(getGroupsByUserId);
   },
-  async handleGetGroupById(id) {
-    const { status, data = null } = await getGroupById(id);
+  async handleGetGroupById({ id, offset = 0, limit = 10 }) {
+    const { status, data = null } = await getGroupById({ id, offset, limit });
     if (status === 401 || status === 400) {
       const { status } = await renewToken();
       if (status === 401 || status === 400) return { status: 400, data: null };
-      return await getGroupById(id);
+      return await getGroupById({ id, offset, limit });
     } else return { status, data };
   },
   async handleGetListUser(keyword) {

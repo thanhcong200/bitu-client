@@ -73,13 +73,10 @@ export const renewToken = async () => {
 
 export const getGroupsByUserId = async () => {
   let token = localStorage.getItem("accessToken");
-  const sort = {
-    "lastMessage.createdAt": "desc",
-  };
   try {
     const res = await axios({
       method: "get",
-      url: `${process.env.REACT_APP_API_URL}/rooms?sort=${sort}`,
+      url: `${process.env.REACT_APP_API_URL}/rooms`,
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -89,12 +86,12 @@ export const getGroupsByUserId = async () => {
   return { status: 400 };
 };
 
-export const getGroupById = async (id) => {
+export const getGroupById = async ({ id, offset, limit }) => {
   const token = localStorage.getItem("accessToken");
   try {
     const res = await axios({
       method: "get",
-      url: `${process.env.REACT_APP_API_URL}/rooms/${id}`,
+      url: `${process.env.REACT_APP_API_URL}/rooms/${id}?offset=${offset}&limit=${limit}`,
       headers: {
         Authorization: `Bearer ${token}`,
       },
